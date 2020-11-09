@@ -1,0 +1,9 @@
+[package]
+name = "dynamization"
+version = "0.1.0"
+authors = ["arbrk1"]
+edition = "2018"
+license = "MIT"
+
+
+[dependencies]
