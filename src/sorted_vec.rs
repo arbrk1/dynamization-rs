@@ -16,9 +16,9 @@ enum Branch {
 impl<T: Ord> Static for SortedVec<T> {
     type Payload = T;
 
-    fn singleton(payload: T) -> Self {
+    fn singleton(item: T) -> Self {
         SortedVec {
-            vec: vec![payload],
+            vec: vec![item],
         }
     }
 

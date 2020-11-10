@@ -2,13 +2,13 @@
 //!
 //!
 
-/// A trait which a static container must implement to become dynamizable.
+/// A trait that a static container must implement to become dynamizable.
 pub trait Static where Self: Sized {
     /// Something akin to `(Key, Value)`.
     type Payload;
 
-    /// Makes a single-element container from a single datum.
-    fn singleton(payload: Self::Payload) -> Self;
+    /// Makes a single-element container from a single item.
+    fn singleton(item: Self::Payload) -> Self;
 
     /// Merges two containers into one.
     ///
@@ -20,57 +20,9 @@ pub trait Static where Self: Sized {
 
 /// A dynamic version of `Container`.
 #[derive(Clone, Debug)]
-pub struct Dynamic<Container> {
+pub struct Dynamic<Container/*, Strategy=Binary*/> {
     units: Vec<Option<Container>>,
-}
-
-
-
-/// Iterator over all partial containers. Shared-reference version.
-pub struct Units<'a, Container> {
-    iter: core::slice::Iter<'a, Option<Container>>,
-}
-
-impl<'a, Container> Iterator for Units<'a, Container> {
-    type Item = &'a Container;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.iter.next() {
-                None => { return None; }
-
-                Some(x) => {
-                    if let Some(container) = x.as_ref() {
-                        return Some(container);
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-/// Iterator over all partial containers. Unique-reference version.
-pub struct UnitsMut<'a, Container> {
-    iter: core::slice::IterMut<'a, Option<Container>>,
-}
-
-impl<'a, Container> Iterator for UnitsMut<'a, Container> {
-    type Item = &'a mut Container;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.iter.next() {
-                None => { return None; }
-
-                Some(x) => {
-                    if let Some(container) = x.as_mut() {
-                        return Some (container);
-                    }
-                }
-            }
-        }
-    }
+    /*strategy: Strategy // essentially a marker, i.e. ZST*/
 }
 
 
@@ -81,15 +33,38 @@ impl<Payload, Container: Static<Payload=Payload>> Dynamic<Container> {
         }
     }
 
+    // TODO: add strategies (binary, skew)
+    pub fn from_sized(container: Container, size: usize) -> Self {
+        let mut unit_size = 1;
+        let mut index = 0;
+
+        while unit_size < size {
+            index += 1;
+            unit_size *= 2;
+        }
+
+        let mut units = Vec::with_capacity(index+1);
+
+        for _ in 0..index {
+            units.push(None);
+        }
+
+        units.push(Some(container));
+
+        Dynamic {
+            units
+        }
+    }
+
     pub fn insert(&mut self, payload: Payload) {
         let mut container = Container::singleton(payload);
         
-        for level in &mut self.units {
-            let content = std::mem::replace(level, None);
+        for unit in &mut self.units {
+            let content = std::mem::replace(unit, None);
             
             match content {
                 None => {
-                    *level = Some(container);
+                    *unit = Some(container);
                     return;
                 }
 
@@ -102,32 +77,14 @@ impl<Payload, Container: Static<Payload=Payload>> Dynamic<Container> {
         self.units.push(Some(container));
     }
 
-    pub fn get(&self, index: usize) -> Option<&Container> {
-        self.units.get(index).map(|x| x.as_ref()).flatten()
-    }
-    
-    pub unsafe fn get_unchecked(&self, index: usize) -> &Container {
-        self.units.get_unchecked(index).as_ref().unwrap()
+    /// Iterator over all partial containers. Shared-reference version.
+    pub fn units(&self) -> impl Iterator<Item=&Container> {
+        self.units.iter().filter_map(|x| x.as_ref())
     }
 
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut Container> {
-        self.units.get_mut(index).map(|x| x.as_mut()).flatten()
-    }
-    
-    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut Container {
-        self.units.get_unchecked_mut(index).as_mut().unwrap()
-    }
-
-    pub fn units(&self) -> Units<Container> {
-        Units {
-            iter: self.units.iter(),
-        }
-    }
-
-    pub fn units_mut(&mut self) -> UnitsMut<Container> {
-        UnitsMut {
-            iter: self.units.iter_mut(),
-        }
+    /// Iterator over all partial containers. Unique-reference version.
+    pub fn units_mut(&mut self) -> impl Iterator<Item=&mut Container> {
+        self.units.iter_mut().filter_map(|x| x.as_mut())
     }
 }
 
