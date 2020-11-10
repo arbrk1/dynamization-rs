@@ -14,12 +14,8 @@ enum Branch {
 }
 
 impl<T: Ord> Static for SortedVec<T> {
-    type Payload = T;
-
-    fn singleton(item: T) -> Self {
-        SortedVec {
-            vec: vec![item],
-        }
+    fn len(&self) -> usize {
+        self.vec.len()
     }
 
     fn merge_with(self, other: Self) -> Self {
@@ -120,7 +116,7 @@ impl<T: Ord> SVQueue<T> {
     }
 
     pub fn push(&mut self, item: T) {
-        self.dynamic.insert(item);
+        self.dynamic.insert(SortedVec { vec: vec![item] });
         self.len += 1;
     }
 
