@@ -21,31 +21,27 @@ pub trait Static where Self: Sized {
 /// A dynamic version of `Container`.
 #[derive(Clone, Debug)]
 pub struct Dynamic<Container> {
-    levels: Vec<Option<Container>>,
+    units: Vec<Option<Container>>,
 }
 
 
 
 /// Iterator over all partial containers. Shared-reference version.
-pub struct Levels<'a, Container> {
-    index: usize,
+pub struct Units<'a, Container> {
     iter: core::slice::Iter<'a, Option<Container>>,
 }
 
-impl<'a, Container> Iterator for Levels<'a, Container> {
-    type Item = (usize, &'a Container);
+impl<'a, Container> Iterator for Units<'a, Container> {
+    type Item = &'a Container;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let index = self.index;
-            self.index += 1;
-
             match self.iter.next() {
                 None => { return None; }
 
                 Some(x) => {
                     if let Some(container) = x.as_ref() {
-                        return Some ( (index, container) );
+                        return Some(container);
                     }
                 }
             }
@@ -55,25 +51,21 @@ impl<'a, Container> Iterator for Levels<'a, Container> {
 
 
 /// Iterator over all partial containers. Unique-reference version.
-pub struct LevelsMut<'a, Container> {
-    index: usize,
+pub struct UnitsMut<'a, Container> {
     iter: core::slice::IterMut<'a, Option<Container>>,
 }
 
-impl<'a, Container> Iterator for LevelsMut<'a, Container> {
-    type Item = (usize, &'a mut Container);
+impl<'a, Container> Iterator for UnitsMut<'a, Container> {
+    type Item = &'a mut Container;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let index = self.index;
-            self.index += 1;
-
             match self.iter.next() {
                 None => { return None; }
 
                 Some(x) => {
                     if let Some(container) = x.as_mut() {
-                        return Some ( (index, container) );
+                        return Some (container);
                     }
                 }
             }
@@ -85,14 +77,14 @@ impl<'a, Container> Iterator for LevelsMut<'a, Container> {
 impl<Payload, Container: Static<Payload=Payload>> Dynamic<Container> {
     pub fn new() -> Self {
         Dynamic {
-            levels: Vec::with_capacity(8),
+            units: Vec::with_capacity(8),
         }
     }
 
     pub fn insert(&mut self, payload: Payload) {
         let mut container = Container::singleton(payload);
         
-        for level in &mut self.levels {
+        for level in &mut self.units {
             let content = std::mem::replace(level, None);
             
             match content {
@@ -107,41 +99,40 @@ impl<Payload, Container: Static<Payload=Payload>> Dynamic<Container> {
             }
         }
 
-        self.levels.push(Some(container));
+        self.units.push(Some(container));
     }
 
     pub fn get(&self, index: usize) -> Option<&Container> {
-        self.levels.get(index).map(|x| x.as_ref()).flatten()
+        self.units.get(index).map(|x| x.as_ref()).flatten()
     }
     
     pub unsafe fn get_unchecked(&self, index: usize) -> &Container {
-        self.levels.get_unchecked(index).as_ref().unwrap()
+        self.units.get_unchecked(index).as_ref().unwrap()
     }
 
     pub fn get_mut(&mut self, index: usize) -> Option<&mut Container> {
-        self.levels.get_mut(index).map(|x| x.as_mut()).flatten()
+        self.units.get_mut(index).map(|x| x.as_mut()).flatten()
     }
     
     pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut Container {
-        self.levels.get_unchecked_mut(index).as_mut().unwrap()
+        self.units.get_unchecked_mut(index).as_mut().unwrap()
     }
 
-    pub fn levels(&self) -> Levels<Container> {
-        Levels {
-            index: 0,
-            iter: self.levels.iter(),
+    pub fn units(&self) -> Units<Container> {
+        Units {
+            iter: self.units.iter(),
         }
     }
 
-    pub fn levels_mut(&mut self) -> LevelsMut<Container> {
-        LevelsMut {
-            index: 0,
-            iter: self.levels.iter_mut(),
+    pub fn units_mut(&mut self) -> UnitsMut<Container> {
+        UnitsMut {
+            iter: self.units.iter_mut(),
         }
     }
 }
 
 
+#[cfg(any(feature = "sorted_vec", doc))]
 pub mod sorted_vec;
 
 

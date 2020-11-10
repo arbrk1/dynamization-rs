@@ -1,4 +1,7 @@
-//! Sorted `Vec`. Can be used as a priority queue or as an associative array.
+//! Sorted `Vec`. Can be used as a priority queue or as an associative array. 
+//! __Requires feature `sorted_vec`__.
+//!
+//! Currently only a priority-queue version is implemented.
 
 use crate::*;
 
@@ -98,10 +101,63 @@ impl<T: Ord> Static for SortedVec<T> {
 }
 
 
-impl<T: Ord> Dynamic<SortedVec<T>> {
-    pub fn push(&mut self, payload: T) {
-        self.insert(payload);
+pub struct SVQueue<T> {
+    dynamic: Dynamic<SortedVec<T>>,
+    len: usize,
+}
+
+
+impl<T: Ord> SVQueue<T> {
+    pub fn new() -> Self {
+        SVQueue {
+            dynamic: Dynamic::new(),
+            len: 0,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn push(&mut self, item: T) {
+        self.dynamic.insert(item);
+        self.len += 1;
+    }
+
+    pub fn peek(&self) -> Option<&T> {
+        self.dynamic.units()
+            .filter_map(|unit| unit.vec.last())
+            .max()
+    }
+
+    pub fn peek_mut(&mut self) -> Option<&mut T> {
+        self.dynamic.units_mut()
+            .filter_map(|unit| unit.vec.last_mut())
+            .max()
+    }
+
+    pub fn pop(&mut self) -> Option<T> {
+        let best_unit = self.dynamic.units_mut()
+            .max_by(|u1, u2| {
+                u1.vec.last().cmp(&u2.vec.last())
+            });
+
+        match best_unit {
+            None => None,
+
+            Some(unit) => {
+                match unit.vec.pop() {
+                    None => None,
+
+                    Some(x) => {
+                        self.len -= 1;
+                        Some(x)
+                    }
+                }
+            }
+        }
     }
 }
+
 
 
