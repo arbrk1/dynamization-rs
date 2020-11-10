@@ -4,12 +4,6 @@
 
 /// A trait that a static container must implement to become dynamizable.
 pub trait Static where Self: Sized {
-    /// Something akin to `(Key, Value)`.
-    type Payload;
-
-    /// Makes a single-element container from a single item.
-    fn singleton(item: Self::Payload) -> Self;
-
     /// Merges two containers into one.
     ///
     /// One possible way to implement this is to collect both containers and 
@@ -18,23 +12,39 @@ pub trait Static where Self: Sized {
 }
 
 
+pub trait Strategy {
+    fn new_with_capacity() -> (Self, usize);
+
+    fn unit_index(size: usize) -> usize;
+
+    fn insert<Container: Static>(
+        &mut self, units: &mut Vec<Option<Container>>, container: Container
+    );
+}
+
+pub mod strategy;
+
+
 /// A dynamic version of `Container`.
 #[derive(Clone, Debug)]
-pub struct Dynamic<Container/*, Strategy=Binary*/> {
+pub struct Dynamic<Container, S: Strategy> {
     units: Vec<Option<Container>>,
-    /*strategy: Strategy // essentially a marker, i.e. ZST*/
+    strategy: S,
 }
 
 
-impl<Payload, Container: Static<Payload=Payload>> Dynamic<Container> {
+impl<Container: Static, S: Strategy> Dynamic<Container, S> {
     pub fn new() -> Self {
+        let (strategy, capacity) = S::new_with_capacity();
+
         Dynamic {
-            units: Vec::with_capacity(8),
+            units: Vec::with_capacity(capacity),
+            strategy,
         }
     }
 
-    // TODO: add strategies (binary, skew)
     pub fn from_sized(container: Container, size: usize) -> Self {
+        /*
         let mut unit_size = 1;
         let mut index = 0;
 
@@ -42,6 +52,9 @@ impl<Payload, Container: Static<Payload=Payload>> Dynamic<Container> {
             index += 1;
             unit_size *= 2;
         }
+        */
+
+        let index = S::unit_index();
 
         let mut units = Vec::with_capacity(index+1);
 
@@ -56,8 +69,8 @@ impl<Payload, Container: Static<Payload=Payload>> Dynamic<Container> {
         }
     }
 
-    pub fn insert(&mut self, payload: Payload) {
-        let mut container = Container::singleton(payload);
+    pub fn insert(&mut self, item: Payload) {
+        let mut container = Container::singleton(item);
         
         for unit in &mut self.units {
             let content = std::mem::replace(unit, None);
