@@ -17,6 +17,10 @@ dynamization = "0.1"
 
 in your `Cargo.toml`.
 
+## Examples
+
+This part of readme is __WIP__. You can read the [docs](https://docs.rs/dynamization/).
+
 ## Versions
 
 * `0.1.0`: Initial commit.

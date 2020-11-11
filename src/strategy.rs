@@ -1,5 +1,17 @@
 use crate::*;
 
+
+pub trait Strategy where Self: Sized {
+    fn new_capacity() -> (Self, usize);
+
+    fn with_capacity(capacity: usize) -> Self;
+
+    fn add<Container: Static>(
+        &mut self, units: &mut Vec<Option<Container>>, container: Container
+    );
+}
+
+
 pub struct Binary;
 
 
@@ -27,7 +39,7 @@ impl Strategy for Binary {
         Binary
     }
 
-    fn insert<Container: Static>(
+    fn add<Container: Static>(
         &mut self, 
         units: &mut Vec<Option<Container>>, 
         mut container: Container)

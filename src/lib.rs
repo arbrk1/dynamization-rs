@@ -1,6 +1,150 @@
 //! # Making static containers dynamic
 //!
+//! Sometimes it's much easier to construct some data structure from 
+//! a predetermined set of data than to implement a way to update 
+//! this data structure with new elements after construction.
 //!
+//! E.g. it's trivial to make a perfectly balanced search tree 
+//! when the data is already known but not so trivial to keep its 
+//! balance after adding/deleting some elements.
+//!
+//! This crate provides a cheap workaround for the case of a data 
+//! structure not having any sensible method of insertion.
+//!
+//! ## Example
+//!
+//! Suppose you have a sorted vector:
+//!
+//! ```
+//! # use core::iter::FromIterator;
+//! struct SortedVec<T> {
+//!     vec: Vec<T>
+//! }
+//!
+//! impl<T: Ord> FromIterator<T> for SortedVec<T> {
+//!     fn from_iter<I>(iter: I) -> Self where
+//!         I: IntoIterator<Item=T>
+//!     {
+//!         let mut vec: Vec<_> = iter.into_iter().collect();
+//!
+//!         vec.sort();
+//!
+//!         SortedVec { vec }
+//!     }
+//! }
+//! ```
+//!
+//! This is almost a perfect data structure for many use cases but every 
+//! insertion is on the average linear in the length of the array.
+//!
+//! This crate provides a struct [`Dynamic`](struct.Dynamic.html):
+//!
+//! ```
+//! # struct SortedVec<T> { t: T }
+//! use dynamization::Dynamic;
+//!
+//! type DynamicSortedVec<T> = Dynamic<SortedVec<T>>;
+//! ```
+//!
+//! which groups the stored data into independent 
+//! [`units`](struct.Dynamic.html#method.units) of different sizes.
+//! The unit sizes are selected in such a way to make single-element 
+//! insertions logarithmic on the average.
+//!
+//! The only thing needed to make [`Dynamic`](struct.Dynamic.html) work is
+//! to implement the [`Static`](trait.Static.html) trait:
+//!
+//! ```
+//! # use core::iter::FromIterator;
+//! # struct SortedVec<T> { vec: Vec<T> }
+//! # impl<T: Ord> FromIterator<T> for SortedVec<T> {
+//! #    fn from_iter<I>(iter: I) -> Self where
+//! #        I: IntoIterator<Item=T> {
+//! #        let mut vec: Vec<_> = iter.into_iter().collect();
+//! #        vec.sort();
+//! #        SortedVec { vec }}}
+//! use dynamization::Static;
+//!
+//! impl<T: Ord> Static for SortedVec<T> {
+//!     fn len(&self) -> usize { 
+//!         self.vec.len() 
+//!     }
+//!
+//!     fn merge_with(self, other: Self) -> Self {
+//!         // Only for documentation purposes: two sorted arrays can be merged 
+//!         // much more efficiently than sorting the concatenation result!
+//!         self.vec.into_iter().chain(other.vec).collect()
+//!     }
+//! }
+//! ```
+//!
+//! Now `DynamicSortedVec` has the [`add`](struct.Dynamic#method.add) method.
+//!
+//! An optional trait [`Singleton`](trait.Singleton.html) can also be 
+//! implemented to make the [`insert`](struct.Dynamic#method.insert) method 
+//! available:
+//! ```
+//! # struct SortedVec<T> { vec: Vec<T> }
+//! use dynamization::Singleton;
+//!
+//! impl<T> Singleton for SortedVec<T> {
+//!     type Item = T;
+//!     
+//!     fn singleton(item: Self::Item) -> Self {
+//!         SortedVec { vec: vec![item] }
+//!     }
+//! }
+//! ```
+//!
+//! Now you can use `DynamicSortedVec` as a rather efficient universal 
+//! data structure:
+//!
+//! ```
+//! # use dynamization::{ Static, Dynamic, Singleton };
+//! # use core::iter::FromIterator;
+//! # struct SortedVec<T> { vec: Vec<T> }
+//! # impl<T: Ord> FromIterator<T> for SortedVec<T> {
+//! #    fn from_iter<I>(iter: I) -> Self where
+//! #        I: IntoIterator<Item=T> {
+//! #        let mut vec: Vec<_> = iter.into_iter().collect();
+//! #        vec.sort();
+//! #        SortedVec { vec }}}
+//! # impl<T: Ord> Static for SortedVec<T> {
+//! #    fn len(&self) -> usize { self.vec.len() }
+//! #    fn merge_with(self, other: Self) -> Self {
+//! #        self.vec.into_iter().chain(other.vec).collect()
+//! #    }
+//! # }
+//! # impl<T> Singleton for SortedVec<T> {
+//! #     type Item = T;
+//! #     fn singleton(item: Self::Item) -> Self {SortedVec {vec:vec![item]}}
+//! # }
+//! # type DynamicSortedVec<T> = Dynamic<SortedVec<T>>;
+//! let mut foo = DynamicSortedVec::new();
+//! for x in vec![(1, "one"), (5, "five"), (4, "four"), (3, "tree"), (6, "six")] {
+//!     foo.insert(x);
+//! }
+//!
+//! // Each query now must be implemented in terms of partial containers:
+//! foo.units_mut().filter_map(|unit| {
+//!     unit.vec
+//!         .binary_search_by_key(&3, |pair| pair.0)
+//!         .ok()
+//!         .map(move |index| &mut unit.vec[index])
+//! }).for_each(|three| {
+//!     assert_eq!(three, &(3, "tree"));
+//!     three.1 = "three";
+//! });
+//!
+//! // A dynamic structure can be "freezed" with .try_collect():
+//! assert_eq!(foo.try_collect().unwrap().vec, vec![
+//!     (1, "one"),
+//!     (3, "three"),
+//!     (4, "four"),
+//!     (5, "five"),
+//!     (6, "six"),
+//! ]);
+//! ```
 
 /// A trait that a static container must implement to become dynamizable.
 pub trait Static where Self: Sized {
@@ -17,19 +161,20 @@ pub trait Static where Self: Sized {
     fn merge_with(self, other: Self) -> Self;
 }
 
+/// A trait which can be implemented to provide a dynamized structure
+/// with a convenient [`insert`](struct.Dynamic.html#method.insert) method.
+pub trait Singleton where Self: Sized {
+    /// A type of the container payload.
+    type Item;
 
-pub trait Strategy where Self: Sized {
-    fn new_capacity() -> (Self, usize);
-
-    fn with_capacity(capacity: usize) -> Self;
-
-    fn insert<Container: Static>(
-        &mut self, units: &mut Vec<Option<Container>>, container: Container
-    );
+    /// A container made from a single item.
+    fn singleton(item: Self::Item) -> Self;
 }
 
-pub mod strategy;
 
+
+pub mod strategy;
+use strategy::Strategy;
 
 /// A dynamic version of `Container`.
 #[derive(Clone, Debug)]
@@ -58,8 +203,8 @@ impl<Container: Static, S: Strategy> Dynamic<Container, S> {
         }
     }
 
-    pub fn insert(&mut self, container: Container) {
-        self.strategy.insert(&mut self.units, container);
+    pub fn add(&mut self, container: Container) {
+        self.strategy.add(&mut self.units, container);
     }
 
     /// Total size of the container.
@@ -79,6 +224,25 @@ impl<Container: Static, S: Strategy> Dynamic<Container, S> {
     /// Iterator over all partial containers. Unique-reference version.
     pub fn units_mut(&mut self) -> impl Iterator<Item=&mut Container> {
         self.units.iter_mut().filter_map(|x| x.as_mut())
+    }
+
+    /// Collects all partial containers into a single one.
+    pub fn try_collect(self) -> Option<Container> {
+        let mut iter = self.units.into_iter().filter_map(|x| x);
+
+        match iter.next() {
+            None => None,
+
+            Some(first) => {
+                Some( iter.fold(first, |acc, x| acc.merge_with(x)) )
+            }
+        }
+    }
+}
+
+impl<Container: Static+Singleton, S: Strategy> Dynamic<Container, S> {
+    pub fn insert(&mut self, item: Container::Item) {
+        self.add(Container::singleton(item));
     }
 }
 

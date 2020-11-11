@@ -96,6 +96,14 @@ impl<T: Ord> Static for SortedVec<T> {
     }
 }
 
+impl<T> Singleton for SortedVec<T> {
+    type Item = T;
+    
+    fn singleton(item: Self::Item) -> Self {
+        SortedVec { vec: vec![item] }
+    }
+}
+
 
 pub struct SVQueue<T> {
     dynamic: Dynamic<SortedVec<T>>,
@@ -116,7 +124,7 @@ impl<T: Ord> SVQueue<T> {
     }
 
     pub fn push(&mut self, item: T) {
-        self.dynamic.insert(SortedVec { vec: vec![item] });
+        self.dynamic.insert(item);
         self.len += 1;
     }
 
