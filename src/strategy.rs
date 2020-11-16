@@ -1,17 +1,35 @@
+//! Different dynamization strategies.
+//!
+//! Currently only [`Binary`](struct.Binary.html) is supported.
+
 use crate::*;
 
 
+/// A dynamization strategy.
+///
+/// Can be simply a ZST. Also can contain some internal bookkeeping machinery.
 pub trait Strategy where Self: Sized {
-    fn new_capacity() -> (Self, usize);
+    /// A default strategy with a default unit count.
+    fn new_unit_count() -> (Self, usize);
 
-    fn with_capacity(capacity: usize) -> Self;
+    /// A strategy with a specified unit count.
+    fn with_unit_count(unit_count: usize) -> Self;
 
+    /// An algorithm for adding a new unit.
+    ///
+    /// Can modify an internal state of the strategy.
     fn add<Container: Static>(
         &mut self, units: &mut Vec<Option<Container>>, container: Container
     );
 }
 
 
+/// Binary dynamization.
+///
+/// A unit with the index `k` is of size between `2^{k-1}+1` and `2^k`.
+///
+/// When a new unit is added to an occupied index, it is merged with 
+/// the occupying one and placed one place further.
 pub struct Binary;
 
 
@@ -31,11 +49,11 @@ impl Binary {
 
 
 impl Strategy for Binary {
-    fn new_capacity() -> (Self, usize) {
+    fn new_unit_count() -> (Self, usize) {
         (Binary, 8)
     }
 
-    fn with_capacity(_capacity: usize) -> Self {
+    fn with_unit_count(_unit_count: usize) -> Self {
         Binary
     }
 

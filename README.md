@@ -12,7 +12,7 @@ a small decrease in query performance.
 Simply include 
 
 ```
-dynamization = "0.1"
+dynamization = "0.2"
 ```
 
 in your `Cargo.toml`.
@@ -23,5 +23,6 @@ This part of readme is __WIP__. You can read the [docs](https://docs.rs/dynamiza
 
 ## Versions
 
-* `0.1.0`: Initial commit.
+* `0.2.0`: Bugfixes && some renames && better docs.
+* `0.1.0`: Initial commit (yanked: the provided `SortedVec` was unsound).
 

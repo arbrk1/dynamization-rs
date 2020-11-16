@@ -185,25 +185,28 @@ pub struct Dynamic<Container, S: Strategy = strategy::Binary> {
 
 
 impl<Container: Static, S: Strategy> Dynamic<Container, S> {
+    /// A new container with a default initial unit count.
     pub fn new() -> Self {
-        let (strategy, capacity) = S::new_capacity();
+        let (strategy, unit_count) = S::new_unit_count();
 
         Dynamic {
-            units: Vec::with_capacity(capacity),
+            units: Vec::with_capacity(unit_count),
             strategy,
         }
     }
 
-    pub fn with_capacity(capacity: usize) -> Self {
-        let strategy = S::with_capacity(capacity);
+    /// A new container with a specified initial unit count.
+    pub fn with_unit_count(unit_count: usize) -> Self {
+        let strategy = S::with_unit_count(unit_count);
         
         Dynamic {
-            units: Vec::with_capacity(capacity),
+            units: Vec::with_capacity(unit_count),
             strategy,
         }
     }
 
-    pub fn add(&mut self, container: Container) {
+    /// Add a new unit (partial container).
+    pub fn add_unit(&mut self, container: Container) {
         self.strategy.add(&mut self.units, container);
     }
 
@@ -226,7 +229,9 @@ impl<Container: Static, S: Strategy> Dynamic<Container, S> {
         self.units.iter_mut().filter_map(|x| x.as_mut())
     }
 
-    /// Collects all partial containers into a single one.
+    /// Collect all partial containers into a single one.
+    ///
+    /// Returns `None` if there are no units.
     pub fn try_collect(self) -> Option<Container> {
         let mut iter = self.units.into_iter().filter_map(|x| x);
 
@@ -241,8 +246,9 @@ impl<Container: Static, S: Strategy> Dynamic<Container, S> {
 }
 
 impl<Container: Static+Singleton, S: Strategy> Dynamic<Container, S> {
+    /// Insert a single item.
     pub fn insert(&mut self, item: Container::Item) {
-        self.add(Container::singleton(item));
+        self.add_unit(Container::singleton(item));
     }
 }
 

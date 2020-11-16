@@ -5,6 +5,9 @@
 
 use crate::*;
 
+/// An opaque struct with an unspecified interface.
+///
+/// Obviously can't be used directly.
 pub struct SortedVec<T> {
     vec: Vec<T>,
 }
@@ -39,11 +42,11 @@ impl<T: Ord> Static for SortedVec<T> {
             match (maybe_x, maybe_y) {
                 (Some(x), Some(y)) => {
                     if x < y {
-                        unsafe { *vec_ptr.add(i) = x; }
+                        unsafe { vec_ptr.add(i).write(x); }
                         maybe_x = a.next();
                         maybe_y = Some(y);
                     } else {
-                        unsafe { *vec_ptr.add(i) = y; }
+                        unsafe { vec_ptr.add(i).write(y); }
                         maybe_x = Some(x);
                         maybe_y = b.next();
                     }
@@ -52,14 +55,14 @@ impl<T: Ord> Static for SortedVec<T> {
                 }
 
                 (Some(x), None) => {
-                    unsafe { *vec_ptr.add(i) = x; }
+                    unsafe { vec_ptr.add(i).write(x); }
                     i += 1;
                     branch = Branch::A;
                     break;
                 }
                 
                 (None, Some(y)) => {
-                    unsafe { *vec_ptr.add(i) = y; }
+                    unsafe { vec_ptr.add(i).write(y); }
                     i += 1;
                     branch = Branch::B;
                     break;
@@ -75,14 +78,14 @@ impl<T: Ord> Static for SortedVec<T> {
         match branch {
             Branch::A => {
                 for x in a {
-                    unsafe { *vec_ptr.add(i) = x; }
+                    unsafe { vec_ptr.add(i).write(x); }
                     i += 1;
                 }
             }
             
             Branch::B => {
                 for x in b {
-                    unsafe { *vec_ptr.add(i) = x; }
+                    unsafe { vec_ptr.add(i).write(x); }
                     i += 1;
                 }
             }
@@ -105,6 +108,9 @@ impl<T> Singleton for SortedVec<T> {
 }
 
 
+/// A priority queue based on a sorted vector.
+///
+/// Currently provides only basic operations.
 pub struct SVQueue<T> {
     dynamic: Dynamic<SortedVec<T>>,
     len: usize,
