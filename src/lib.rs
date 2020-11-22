@@ -152,6 +152,12 @@ pub trait Static where Self: Sized {
     ///
     /// Best measured with the number of single-element insertions needed 
     /// to make such a container.
+    ///
+    /// If the size can't be determined (i.e. the container doesn't have any 
+    /// way of defining single-element insertion), return `1` and use some
+    /// strategy which doesn't rely on knowing correct sizes: e.g. 
+    /// [`SimpleBinary`](strategy::SimpleBinary) or 
+    /// [`SkewBinary`](strategy::SkewBinary).
     fn len(&self) -> usize;
 
     /// Merges two containers into one.
@@ -205,7 +211,7 @@ impl<Container: Static, S: Strategy> Dynamic<Container, S> {
         }
     }
 
-    /// Add a new unit (partial container).
+    /// Adds a new unit (partial container).
     pub fn add_unit(&mut self, container: Container) {
         self.strategy.add(&mut self.units, container);
     }
@@ -214,7 +220,7 @@ impl<Container: Static, S: Strategy> Dynamic<Container, S> {
     ///
     /// It is calculated as a sum of partial lengths.
     /// Usually can be replaced without much hassle by a variable 
-    /// tracking insertions/deletion.
+    /// tracking insertions/deletions.
     pub fn len(&self) -> usize {
         self.units().map(|x| x.len()).sum()
     }
@@ -229,7 +235,7 @@ impl<Container: Static, S: Strategy> Dynamic<Container, S> {
         self.units.iter_mut().filter_map(|x| x.as_mut())
     }
 
-    /// Collect all partial containers into a single one.
+    /// Collects all partial containers into a single one.
     ///
     /// Returns `None` if there are no units.
     pub fn try_collect(self) -> Option<Container> {
@@ -246,7 +252,9 @@ impl<Container: Static, S: Strategy> Dynamic<Container, S> {
 }
 
 impl<Container: Static+Singleton, S: Strategy> Dynamic<Container, S> {
-    /// Insert a single item.
+    /// Inserts a single item.
+    ///
+    /// Requires [`Singleton`] to be implemented for the container type.
     pub fn insert(&mut self, item: Container::Item) {
         self.add_unit(Container::singleton(item));
     }

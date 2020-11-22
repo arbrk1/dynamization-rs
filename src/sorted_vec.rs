@@ -135,7 +135,7 @@ impl<T: Ord> SVQueue<T> {
     /// use dynamization::strategy;
     ///
     /// let pqueue = SVQueue::<i32>::with_strategy::<strategy::SkewBinary>();
-    /// //                    ^^^^^ -- optional if the payload type can be inferred
+    /// //                  ^^^^^^^ -- optional if the payload type can be inferred
     /// ```
     ///
     /// The [`SkewBinary`](strategy::SkewBinary) strategy has the fastest 
