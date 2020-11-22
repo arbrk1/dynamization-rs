@@ -4,9 +4,9 @@ use criterion::{
 
 
 pub fn insertion(c: &mut Criterion) {
-    use rand::Rng;
+    use rand::{ Rng, SeedableRng };
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(42);
 
     let mut group = c.benchmark_group("insertion");
 
@@ -50,9 +50,9 @@ pub fn insertion(c: &mut Criterion) {
 
 
 pub fn deletion(c: &mut Criterion) {
-    use rand::Rng;
+    use rand::{ Rng, SeedableRng };
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::seed_from_u64(42);
 
     let mut group = c.benchmark_group("deletion");
 

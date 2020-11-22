@@ -8,6 +8,7 @@ use crate::*;
 /// An opaque struct with an unspecified interface.
 ///
 /// Obviously can't be used directly.
+#[derive(Clone, Debug)]
 pub struct SortedVec<T> {
     vec: Vec<T>,
 }
@@ -111,6 +112,7 @@ impl<T> Singleton for SortedVec<T> {
 /// A priority queue based on a sorted vector.
 ///
 /// Currently provides only basic operations.
+#[derive(Clone, Debug)]
 pub struct SVQueue<T> {
     dynamic: Dynamic<SortedVec<T>>,
     len: usize,

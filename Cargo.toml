@@ -1,6 +1,6 @@
 [package]
 name = "dynamization"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["arbrk1"]
 edition = "2018"
 license = "MIT"
@@ -25,5 +25,11 @@ default = []
 [[bench]]
 name = "pqueue"
 harness = false
+required-features = ["sorted_vec"]
+
+[[test]]
+name = "svqueue"
+required-features = ["sorted_vec"]
+
 
 

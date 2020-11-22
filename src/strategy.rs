@@ -1,6 +1,6 @@
 //! Different dynamization strategies.
 //!
-//! Currently only [`Binary`](struct.Binary.html) is supported.
+//! Currently only [`Binary`] is supported.
 
 use crate::*;
 
@@ -30,6 +30,7 @@ pub trait Strategy where Self: Sized {
 ///
 /// When a new unit is added to an occupied index, it is merged with 
 /// the occupying one and placed one place further.
+#[derive(Clone, Debug)]
 pub struct Binary;
 
 

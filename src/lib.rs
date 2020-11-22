@@ -37,7 +37,7 @@
 //! This is almost a perfect data structure for many use cases but every 
 //! insertion is on the average linear in the length of the array.
 //!
-//! This crate provides a struct [`Dynamic`](struct.Dynamic.html):
+//! This crate provides a struct [`Dynamic`]:
 //!
 //! ```
 //! # struct SortedVec<T> { t: T }
@@ -47,12 +47,12 @@
 //! ```
 //!
 //! which groups the stored data into independent 
-//! [`units`](struct.Dynamic.html#method.units) of different sizes.
+//! [`units`](Dynamic::units) of different sizes.
 //! The unit sizes are selected in such a way to make single-element 
 //! insertions logarithmic on the average.
 //!
-//! The only thing needed to make [`Dynamic`](struct.Dynamic.html) work is
-//! to implement the [`Static`](trait.Static.html) trait:
+//! The only thing needed to make [`Dynamic`] work is
+//! to implement the [`Static`] trait:
 //!
 //! ```
 //! # use core::iter::FromIterator;
@@ -78,10 +78,10 @@
 //! }
 //! ```
 //!
-//! Now `DynamicSortedVec` has the [`add`](struct.Dynamic#method.add) method.
+//! Now `DynamicSortedVec` has the [`add`](Dynamic::add) method.
 //!
-//! An optional trait [`Singleton`](trait.Singleton.html) can also be 
-//! implemented to make the [`insert`](struct.Dynamic#method.insert) method 
+//! An optional trait [`Singleton`] can also be 
+//! implemented to make the [`insert`](Dynamic::insert) method 
 //! available:
 //! ```
 //! # struct SortedVec<T> { vec: Vec<T> }
@@ -162,7 +162,7 @@ pub trait Static where Self: Sized {
 }
 
 /// A trait which can be implemented to provide a dynamized structure
-/// with a convenient [`insert`](struct.Dynamic.html#method.insert) method.
+/// with a convenient [`insert`](Dynamic::insert) method.
 pub trait Singleton where Self: Sized {
     /// A type of the container payload.
     type Item;
