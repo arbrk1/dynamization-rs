@@ -120,6 +120,7 @@ pub struct SVQueue<T, S = strategy::Binary> {
 
 
 impl<T: Ord> SVQueue<T> {
+    /// Uses the [`Binary`](strategy::Binary) strategy.
     pub fn new() -> Self {
         SVQueue {
             dynamic: Dynamic::new(),
@@ -133,9 +134,12 @@ impl<T: Ord> SVQueue<T> {
     /// # use dynamization::sorted_vec::SVQueue;
     /// use dynamization::strategy;
     ///
-    /// let pqueue: SVQueue<i32> = SVQueue::with_strategy::<strategy::Binary>();
-    /// //        ^^^^^^^^^^^^^^ -- optional if the payload type can be inferred
+    /// let pqueue = SVQueue::<i32>::with_strategy::<strategy::SkewBinary>();
+    /// //                    ^^^^^ -- optional if the payload type can be inferred
     /// ```
+    ///
+    /// The [`SkewBinary`](strategy::SkewBinary) strategy has the fastest 
+    /// [peeks](SVQueue::peek) and [deletions](SVQueue::pop).
     pub fn with_strategy<S: Strategy>() -> SVQueue<T, S> {
         SVQueue {
             dynamic: Dynamic::new(),

@@ -43,6 +43,33 @@ pub fn insertion(c: &mut Criterion) {
                 }
             });
         });
+        
+
+        group.bench_with_input(BenchmarkId::new("svqueue_simple", size), &vec, |b, v| {
+            b.iter(|| {
+                use dynamization::sorted_vec::SVQueue;
+                use dynamization::strategy::SimpleBinary;
+
+                let mut q = SVQueue::<i32>::with_strategy::<SimpleBinary>();
+
+                for x in v {
+                    q.push(*x);
+                }
+            });
+        });
+        
+        group.bench_with_input(BenchmarkId::new("svqueue_skew", size), &vec, |b, v| {
+            b.iter(|| {
+                use dynamization::sorted_vec::SVQueue;
+                use dynamization::strategy::SkewBinary;
+
+                let mut q = SVQueue::<i32>::with_strategy::<SkewBinary>();
+
+                for x in v {
+                    q.push(*x);
+                }
+            });
+        });
     }
 
     group.finish();
@@ -87,6 +114,41 @@ pub fn deletion(c: &mut Criterion) {
                 use dynamization::sorted_vec::SVQueue;
 
                 let mut q = SVQueue::<i32>::new();
+
+                for x in v {
+                    q.push(*x);
+                }
+                
+                q
+            }, |mut q| {
+                while let Some(_) = q.pop() {}
+            }, BatchSize::SmallInput);
+        });
+        
+
+        group.bench_with_input(BenchmarkId::new("svqueue_simple", size), &vec, |b, v| {
+            b.iter_batched(|| {
+                use dynamization::sorted_vec::SVQueue;
+                use dynamization::strategy::SimpleBinary;
+
+                let mut q = SVQueue::<i32>::with_strategy::<SimpleBinary>();
+
+                for x in v {
+                    q.push(*x);
+                }
+                
+                q
+            }, |mut q| {
+                while let Some(_) = q.pop() {}
+            }, BatchSize::SmallInput);
+        });
+        
+        group.bench_with_input(BenchmarkId::new("svqueue_skew", size), &vec, |b, v| {
+            b.iter_batched(|| {
+                use dynamization::sorted_vec::SVQueue;
+                use dynamization::strategy::SkewBinary;
+
+                let mut q = SVQueue::<i32>::with_strategy::<SkewBinary>();
 
                 for x in v {
                     q.push(*x);

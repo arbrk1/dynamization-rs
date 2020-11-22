@@ -1,8 +1,15 @@
 use dynamization::sorted_vec::SVQueue;
 use std::collections::BinaryHeap;
+use dynamization::strategy;
 
 #[test]
 fn test_sorted() {
+    test_sorted_strategy::<strategy::Binary>();
+    test_sorted_strategy::<strategy::SimpleBinary>();
+    test_sorted_strategy::<strategy::SkewBinary>();
+}
+
+fn test_sorted_strategy<S: strategy::Strategy>() {
     use rand::{ Rng, SeedableRng };
     
     let mut rng = rand::rngs::StdRng::seed_from_u64(42);
@@ -18,7 +25,7 @@ fn test_sorted() {
         to_sort.sort();
 
         let mut result = Vec::new();
-        let mut svqueue = SVQueue::new();
+        let mut svqueue = SVQueue::with_strategy::<S>();
 
         for x in to_process {
             svqueue.push(x);
@@ -37,6 +44,12 @@ fn test_sorted() {
 
 #[test]
 fn test_binheap() {
+    test_binheap_strategy::<strategy::Binary>();
+    test_binheap_strategy::<strategy::SimpleBinary>();
+    test_binheap_strategy::<strategy::SkewBinary>();
+}
+
+fn test_binheap_strategy<S: strategy::Strategy>() {
     use rand::{ Rng, SeedableRng };
     
     let mut rng = rand::rngs::StdRng::seed_from_u64(42);

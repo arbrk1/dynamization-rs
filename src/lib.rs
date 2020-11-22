@@ -49,7 +49,7 @@
 //! which groups the stored data into independent 
 //! [`units`](Dynamic::units) of different sizes.
 //! The unit sizes are selected in such a way to make single-element 
-//! insertions logarithmic on the average.
+//! insertions on the average logarithmic.
 //!
 //! The only thing needed to make [`Dynamic`] work is
 //! to implement the [`Static`] trait:
