@@ -78,7 +78,7 @@
 //! }
 //! ```
 //!
-//! Now `DynamicSortedVec` has the [`add`](Dynamic::add) method.
+//! Now `DynamicSortedVec` has the [`add_unit`](Dynamic::add_unit) method.
 //!
 //! An optional trait [`Singleton`] can also be 
 //! implemented to make the [`insert`](Dynamic::insert) method 
@@ -178,7 +178,7 @@ use strategy::Strategy;
 
 /// A dynamic version of `Container`.
 #[derive(Clone, Debug)]
-pub struct Dynamic<Container, S: Strategy = strategy::Binary> {
+pub struct Dynamic<Container, S = strategy::Binary> {
     units: Vec<Option<Container>>,
     strategy: S,
 }

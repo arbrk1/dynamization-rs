@@ -113,8 +113,8 @@ impl<T> Singleton for SortedVec<T> {
 ///
 /// Currently provides only basic operations.
 #[derive(Clone, Debug)]
-pub struct SVQueue<T> {
-    dynamic: Dynamic<SortedVec<T>>,
+pub struct SVQueue<T, S = strategy::Binary> {
+    dynamic: Dynamic<SortedVec<T>, S>,
     len: usize,
 }
 
@@ -127,6 +127,25 @@ impl<T: Ord> SVQueue<T> {
         }
     }
 
+    /// Can be used as in 
+    ///
+    /// ```
+    /// # use dynamization::sorted_vec::SVQueue;
+    /// use dynamization::strategy;
+    ///
+    /// let pqueue: SVQueue<i32> = SVQueue::with_strategy::<strategy::Binary>();
+    /// //        ^^^^^^^^^^^^^^ -- optional if the payload type can be inferred
+    /// ```
+    pub fn with_strategy<S: Strategy>() -> SVQueue<T, S> {
+        SVQueue {
+            dynamic: Dynamic::new(),
+            len: 0,
+        }
+    }
+}
+
+
+impl<T: Ord, S: Strategy> SVQueue<T, S> {
     pub fn len(&self) -> usize {
         self.len
     }
