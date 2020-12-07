@@ -23,6 +23,7 @@ This part of readme is __WIP__. You can read the [docs](https://docs.rs/dynamiza
 
 ## Versions
 
+* `0.4.0`: WIP
 * `0.3.0`: Updated/fixed docs & added two new dynamization variants & `SVQueue` has now a `Strategy` generic parameter.
 * `0.2.0`: Bugfixes && some renames && better docs.
 * `0.1.0`: Initial commit (yanked: the provided `SortedVec` was unsound).

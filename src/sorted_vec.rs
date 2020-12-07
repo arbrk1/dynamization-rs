@@ -1,7 +1,5 @@
 //! Sorted `Vec`. Can be used as a priority queue or as an associative array. 
 //! __Requires feature `sorted_vec`__.
-//!
-//! Currently only a priority-queue version is implemented.
 
 use crate::*;
 
@@ -94,6 +92,10 @@ impl<T: Ord> Static for SortedVec<T> {
             Branch::None => {}
         }
 
+        assert!(i == vec.capacity());
+        // Safety: the assertion above; also this assertion almost guarantees
+        // that the memory accesses in the loops above (.add(i).write(...))
+        // do not touch unallocated memory.
         unsafe { vec.set_len(i); }
 
         SortedVec { vec }
@@ -154,6 +156,10 @@ impl<T: Ord, S: Strategy> SVQueue<T, S> {
         self.len
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
     pub fn push(&mut self, item: T) {
         self.dynamic.insert(item);
         self.len += 1;
@@ -194,5 +200,132 @@ impl<T: Ord, S: Strategy> SVQueue<T, S> {
     }
 }
 
+
+/// An associative array based on a sorted vector.
+///
+/// Currently provides only basic operations.
+#[derive(Clone, Debug)]
+pub struct SVMap<K, V, S = strategy::Binary> {
+    dynamic: Dynamic<SortedVec<SVPair<K, V>>, S>,
+    len: usize,
+}
+
+#[derive(Clone, Debug)]
+struct SVPair<K, V>(K, Option<V>);
+
+impl<K: Ord, V> Ord for SVPair<K, V> {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+impl<K: Ord, V> PartialOrd for SVPair<K, V> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<K: Ord, V> PartialEq for SVPair<K, V> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<K: Ord, V> Eq for SVPair<K, V> {}
+
+impl<K: Ord, V> SVMap<K, V> {
+    /// Uses the [`Binary`](strategy::Binary) strategy.
+    pub fn new() -> Self {
+        SVMap {
+            dynamic: Dynamic::new(),
+            len: 0,
+        }
+    }
+
+    /// Can be used as in 
+    ///
+    /// ```
+    /// # use dynamization::sorted_vec::SVMap;
+    /// use dynamization::strategy;
+    ///
+    /// let svmap = SVMap::<String, i32>::with_strategy::<strategy::SkewBinary>();
+    /// //               ^^^^^^^^^^^^^^^ -- optional if the payload type can be inferred
+    /// ```
+    pub fn with_strategy<S: Strategy>() -> SVMap<K, V, S> {
+        SVMap {
+            dynamic: Dynamic::new(),
+            len: 0,
+        }
+    }
+}
+
+
+impl<K: Ord, V, S: Strategy> SVMap<K, V, S> {
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    fn search<Q: Ord + ?Sized>(&self, key: &Q) -> Option<&SVPair<K, V>> where
+        K: core::borrow::Borrow<Q> 
+    {
+        for unit in self.dynamic.units() {
+            let vec = &unit.vec;
+
+            if let Ok(index) = vec.binary_search_by(|entry| {
+                entry.0.borrow().cmp(key)
+            }) {
+                // Safety: binary search
+                return unsafe { Some(vec.get_unchecked(index)) }
+            }
+        }
+
+        None
+    }
+
+    fn search_mut<Q: Ord + ?Sized>(&mut self, key: &Q) -> Option<&mut SVPair<K, V>> where
+        K: core::borrow::Borrow<Q> 
+    {
+        for unit in self.dynamic.units_mut() {
+            let vec = &mut unit.vec;
+
+            if let Ok(index) = vec.binary_search_by(|entry| {
+                entry.0.borrow().cmp(key)
+            }) {
+                // Safety: binary search
+                return unsafe { Some(vec.get_unchecked_mut(index)) }
+            }
+        }
+
+        None
+    }
+
+    pub fn get<Q: Ord + ?Sized>(&self, key: &Q) -> Option<&V> where
+        K: core::borrow::Borrow<Q>
+    {
+        self.search(key).map(|entry| entry.1.as_ref()).flatten()
+    }
+
+    pub fn get_key_value<Q: Ord + ?Sized>(&self, key: &Q) -> Option<(&K, &V)> where
+        K: core::borrow::Borrow<Q>
+    {
+        self.search(key).map(|entry| {
+            match &entry.1 {
+                Some(v) => { Some( (&entry.0, v) ) }
+                None => { None }
+            }
+        }).flatten()
+    }
+
+    pub fn get_mut<Q: Ord + ?Sized>(&mut self, key: &Q) -> Option<&mut V> where
+        K: core::borrow::Borrow<Q>
+    {
+        self.search_mut(key).map(|entry| entry.1.as_mut()).flatten()
+    }
+
+}
 
 
