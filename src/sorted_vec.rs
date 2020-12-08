@@ -7,6 +7,7 @@
 
 
 use crate::*;
+use alloc::vec;
 
 /// An opaque struct with an unspecified interface.
 ///
@@ -152,11 +153,13 @@ impl<T: Ord> SVQueue<T> {
     /// Can be used as in 
     ///
     /// ```
+    /// # #[cfg(feature="sorted_vec")] {
     /// # use dynamization::sorted_vec::SVQueue;
     /// use dynamization::strategy;
     ///
     /// let pqueue = SVQueue::<i32>::with_strategy::<strategy::SkewBinary>();
     /// //                  ^^^^^^^ -- optional if the payload type can be inferred
+    /// # }
     /// ```
     ///
     /// The [`SkewBinary`](strategy::SkewBinary) strategy has the fastest 
@@ -301,11 +304,13 @@ impl<K: Ord, V> SVMap<K, V> {
     /// Can be used as in 
     ///
     /// ```
+    /// # #[cfg(feature="sorted_vec")] {
     /// # use dynamization::sorted_vec::SVMap;
     /// use dynamization::strategy;
     ///
     /// let svmap = SVMap::<String, i32>::with_strategy::<strategy::SkewBinary>();
     /// //               ^^^^^^^^^^^^^^^ -- optional if the payload type can be inferred
+    /// # }
     /// ```
     pub fn with_strategy<S: Strategy>() -> SVMap<K, V, S> {
         SVMap {

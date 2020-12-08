@@ -36,5 +36,8 @@ required-features = ["sorted_vec"]
 name = "svqueue"
 required-features = ["sorted_vec"]
 
+[[test]]
+name = "svmap"
+required-features = ["sorted_vec"]
 
 
