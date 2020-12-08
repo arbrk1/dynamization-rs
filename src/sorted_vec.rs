@@ -1,5 +1,10 @@
 //! Sorted `Vec`. Can be used as a priority queue or as an associative array. 
 //! __Requires feature `sorted_vec`__.
+//!
+//! Defines an opaque [`SortedVec`] type and two containers:
+//! * [`SVQueue`] analogous to [`BinaryHeap`](alloc::collections::BinaryHeap)
+//! * [`SVMap`] analogous to [`BTreeMap`](alloc::collections::BTreeMap)
+
 
 use crate::*;
 
@@ -121,9 +126,13 @@ impl<T: Ord> core::iter::FromIterator<T> for SortedVec<T> {
 }
 
 
-/// A priority queue based on a sorted vector.
+/// A max-priority queue based on a sorted vector.
 ///
 /// Currently provides only basic operations.
+///
+/// Has slow insertions (4-8 times slower than those of 
+/// [`BinaryHeap`](`alloc::collections::BinaryHeap`)) but fast deletions 
+/// (2-3 times faster then [`BinaryHeap`](alloc::collections::BinaryHeap) ones).
 #[derive(Clone, Debug)]
 pub struct SVQueue<T, S = strategy::Binary> {
     dynamic: Dynamic<SortedVec<T>, S>,
@@ -162,31 +171,37 @@ impl<T: Ord> SVQueue<T> {
 
 
 impl<T: Ord, S: Strategy> SVQueue<T, S> {
+    /// Returns the number of elements currently stored.
     pub fn len(&self) -> usize {
         self.len
     }
 
+    /// Returns `self.len() == 0`.
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 
+    /// Inserts a new item into the container.
     pub fn push(&mut self, item: T) {
         self.dynamic.insert(item);
         self.len += 1;
     }
 
+    /// Returns the current maximum.
     pub fn peek(&self) -> Option<&T> {
         self.dynamic.units()
             .filter_map(|unit| unit.vec.last())
             .max()
     }
 
+    /// Exclusively returns the current maximum.
     pub fn peek_mut(&mut self) -> Option<&mut T> {
         self.dynamic.units_mut()
             .filter_map(|unit| unit.vec.last_mut())
             .max()
     }
 
+    /// Removes the current maximum from the container.
     pub fn pop(&mut self) -> Option<T> {
         let best_unit = self.dynamic.units_mut()
             .max_by(|u1, u2| {
@@ -239,6 +254,10 @@ fn test_svqueue_len() {
 /// An associative array based on a sorted vector.
 ///
 /// Currently provides only basic operations.
+///
+/// Much slower than [`BTreeMap`](`alloc::collections::BTreeMap`) so useful 
+/// only for nonpractical purposes (mainly as an example of implementing 
+/// a dynamized container).
 #[derive(Clone, Debug)]
 pub struct SVMap<K, V, S = strategy::Binary> {
     dynamic: Dynamic<SortedVec<SVPair<K, V>>, S>,
@@ -299,10 +318,12 @@ impl<K: Ord, V> SVMap<K, V> {
 
 
 impl<K: Ord, V, S: Strategy> SVMap<K, V, S> {
+    /// Returns the number of elements currently stored.
     pub fn len(&self) -> usize {
         self.len
     }
 
+    /// Returns `self.len() == 0`.
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
@@ -341,18 +362,28 @@ impl<K: Ord, V, S: Strategy> SVMap<K, V, S> {
         None
     }
     
+    /// Searches for an item with a specified key. 
+    ///
+    /// Returns `true` if the item is found.
     pub fn contains_key<Q: Ord + ?Sized>(&self, key: &Q) -> bool where
         K: core::borrow::Borrow<Q>
     {
         self.search(key).is_some()
     }
 
+    /// Searches for an item with a specified key. 
+    ///
+    /// Returns a shared reference to the item found or `None`.
     pub fn get<Q: Ord + ?Sized>(&self, key: &Q) -> Option<&V> where
         K: core::borrow::Borrow<Q>
     {
         self.search(key).map(|entry| entry.1.as_ref()).flatten()
     }
 
+    /// Searches for an item with a specified key. 
+    ///
+    /// Returns shared references to the key and the value stored or `None` if 
+    /// the item has not been found.
     pub fn get_key_value<Q: Ord + ?Sized>(&self, key: &Q) -> Option<(&K, &V)> where
         K: core::borrow::Borrow<Q>
     {
@@ -364,6 +395,9 @@ impl<K: Ord, V, S: Strategy> SVMap<K, V, S> {
         }).flatten()
     }
 
+    /// Searches for an item with a specified key. 
+    ///
+    /// Returns an exclusive reference to the item found or `None`.
     pub fn get_mut<Q: Ord + ?Sized>(&mut self, key: &Q) -> Option<&mut V> where
         K: core::borrow::Borrow<Q>
     {
@@ -393,7 +427,10 @@ impl<K: Ord, V, S: Strategy> SVMap<K, V, S> {
    
 
     const REBUILD_THRESHOLD: usize = 16;
-    
+   
+    /// Removes an item from the container.
+    ///
+    /// Returns the item removed or `None` if the item has not been found.
     pub fn remove<Q: Ord + ?Sized>(&mut self, key: &Q) -> Option<V> where
         K: core::borrow::Borrow<Q>
     {
@@ -418,7 +455,7 @@ impl<K: Ord, V, S: Strategy> SVMap<K, V, S> {
     }
     
    
-    // Removes all elements from the map.
+    /// Removes all elements from the map.
     pub fn clear(&mut self) {
         self.dynamic.clear();
         self.len = 0;

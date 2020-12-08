@@ -12,7 +12,7 @@ a small decrease in query performance.
 Simply include 
 
 ```
-dynamization = "0.3"
+dynamization = "0.4"
 ```
 
 in your `Cargo.toml`.
@@ -23,7 +23,7 @@ This part of readme is __WIP__. You can read the [docs](https://docs.rs/dynamiza
 
 ## Versions
 
-* `0.4.0`: WIP
+* `0.4.0`: Small improvements for `Dynamic` & introduced `SVMap` & made the crate `no_std` (but still requires `alloc`).
 * `0.3.0`: Updated/fixed docs & added two new dynamization variants & `SVQueue` has now a `Strategy` generic parameter.
 * `0.2.0`: Bugfixes && some renames && better docs.
 * `0.1.0`: Initial commit (yanked: the provided `SortedVec` was unsound).
