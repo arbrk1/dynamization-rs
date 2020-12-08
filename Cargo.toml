@@ -27,6 +27,11 @@ name = "pqueue"
 harness = false
 required-features = ["sorted_vec"]
 
+[[bench]]
+name = "svmap"
+harness = false
+required-features = ["sorted_vec"]
+
 [[test]]
 name = "svqueue"
 required-features = ["sorted_vec"]

@@ -225,17 +225,25 @@ impl<Container: Static, S: Strategy> Dynamic<Container, S> {
         self.units().map(|x| x.len()).sum()
     }
 
-    /// Iterator over all partial containers. Shared-reference version.
+    /// Returns `true` if there are no elements.
+    ///
+    /// Warning: this function queries all the units. It's much better 
+    /// to replace this function with a variable tracking insertions/deletions.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Iterator over all the partial containers. Shared-reference version.
     pub fn units(&self) -> impl Iterator<Item=&Container> {
         self.units.iter().filter_map(|x| x.as_ref())
     }
 
-    /// Iterator over all partial containers. Unique-reference version.
+    /// Iterator over all the partial containers. Unique-reference version.
     pub fn units_mut(&mut self) -> impl Iterator<Item=&mut Container> {
         self.units.iter_mut().filter_map(|x| x.as_mut())
     }
 
-    /// Collects all partial containers into a single one.
+    /// Collects all the partial containers into a single one.
     ///
     /// Returns `None` if there are no units.
     pub fn try_collect(self) -> Option<Container> {
@@ -247,6 +255,13 @@ impl<Container: Static, S: Strategy> Dynamic<Container, S> {
             Some(first) => {
                 Some( iter.fold(first, |acc, x| acc.merge_with(x)) )
             }
+        }
+    }
+
+    /// Clears all the partial containers.
+    pub fn clear(&mut self) {
+        for unit in self.units.iter_mut() {
+            *unit = None;
         }
     }
 }

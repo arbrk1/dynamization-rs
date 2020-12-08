@@ -200,6 +200,31 @@ impl<T: Ord, S: Strategy> SVQueue<T, S> {
     }
 }
 
+#[test]
+fn test_svqueue_len() {
+    let some_numbers = vec![1,4,6,2,1,5,7,4,3,2,7,8];
+
+    let mut pqueue = SVQueue::new();
+    let mut counter = 0;
+
+    for x in some_numbers { 
+        pqueue.push(x);
+        counter += 1;
+
+        assert_eq!(pqueue.len(), pqueue.dynamic.len());
+        assert_eq!(pqueue.len(), counter);
+    }
+
+    while !pqueue.is_empty() {
+        pqueue.pop();
+        counter -= 1;
+
+        assert_eq!(pqueue.len(), pqueue.dynamic.len());
+        assert_eq!(pqueue.len(), counter);
+    }
+}
+
+
 
 /// An associative array based on a sorted vector.
 ///
@@ -208,6 +233,7 @@ impl<T: Ord, S: Strategy> SVQueue<T, S> {
 pub struct SVMap<K, V, S = strategy::Binary> {
     dynamic: Dynamic<SortedVec<SVPair<K, V>>, S>,
     len: usize,
+    free_count: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -239,6 +265,7 @@ impl<K: Ord, V> SVMap<K, V> {
         SVMap {
             dynamic: Dynamic::new(),
             len: 0,
+            free_count: 0,
         }
     }
 
@@ -255,6 +282,7 @@ impl<K: Ord, V> SVMap<K, V> {
         SVMap {
             dynamic: Dynamic::new(),
             len: 0,
+            free_count: 0,
         }
     }
 }
@@ -278,7 +306,7 @@ impl<K: Ord, V, S: Strategy> SVMap<K, V, S> {
             if let Ok(index) = vec.binary_search_by(|entry| {
                 entry.0.borrow().cmp(key)
             }) {
-                // Safety: binary search
+                // Safety: binary search returned Ok
                 return unsafe { Some(vec.get_unchecked(index)) }
             }
         }
@@ -295,12 +323,18 @@ impl<K: Ord, V, S: Strategy> SVMap<K, V, S> {
             if let Ok(index) = vec.binary_search_by(|entry| {
                 entry.0.borrow().cmp(key)
             }) {
-                // Safety: binary search
+                // Safety: binary search returned Ok
                 return unsafe { Some(vec.get_unchecked_mut(index)) }
             }
         }
 
         None
+    }
+    
+    pub fn contains_key<Q: Ord + ?Sized>(&self, key: &Q) -> bool where
+        K: core::borrow::Borrow<Q>
+    {
+        self.search(key).is_some()
     }
 
     pub fn get<Q: Ord + ?Sized>(&self, key: &Q) -> Option<&V> where
@@ -326,6 +360,50 @@ impl<K: Ord, V, S: Strategy> SVMap<K, V, S> {
         self.search_mut(key).map(|entry| entry.1.as_mut()).flatten()
     }
 
+    /// Inserts a new key-value pair into the map.
+    ///
+    /// Returns the old value if it has been present. __Does not__ update 
+    /// the key in such a case!
+    pub fn insert(&mut self, key: K, value: V) -> Option<V> {
+        if let Some(entry) = self.search_mut(&key) {
+            let result = std::mem::replace(&mut entry.1, Some(value));
+
+            if let None = result {
+                self.len += 1;
+                self.free_count -= 1;
+            }
+
+            result
+        } else {
+            self.dynamic.insert(SVPair(key, Some(value)));
+            self.len += 1;
+            None
+        }
+    }
+    
+    
+    pub fn remove<Q: Ord + ?Sized>(&mut self, key: &Q) -> Option<V> where
+        K: core::borrow::Borrow<Q>
+    {
+        if let Some(entry) = self.search_mut(&key) {
+            let result = std::mem::replace(&mut entry.1, None);
+
+            if let Some(_) = result {
+                self.len -= 1;
+                self.free_count += 1;
+            }
+
+            result
+        } else { None }
+    }
+    
+   
+    // Removes all elements from the map.
+    pub fn clear(&mut self) {
+        self.dynamic.clear();
+        self.len = 0;
+        self.free_count = 0;
+    }
 }
 
 
