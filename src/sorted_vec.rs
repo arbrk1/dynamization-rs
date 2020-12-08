@@ -110,6 +110,16 @@ impl<T> Singleton for SortedVec<T> {
     }
 }
 
+impl<T: Ord> core::iter::FromIterator<T> for SortedVec<T> {
+    fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self {
+        let mut vec = iter.into_iter().collect::<Vec<_>>();
+        
+        vec.sort();
+
+        SortedVec { vec }
+    }
+}
+
 
 /// A priority queue based on a sorted vector.
 ///
@@ -211,16 +221,16 @@ fn test_svqueue_len() {
         pqueue.push(x);
         counter += 1;
 
-        assert_eq!(pqueue.len(), pqueue.dynamic.len());
         assert_eq!(pqueue.len(), counter);
+        assert_eq!(pqueue.len(), pqueue.dynamic.len());
     }
 
     while !pqueue.is_empty() {
         pqueue.pop();
         counter -= 1;
 
-        assert_eq!(pqueue.len(), pqueue.dynamic.len());
         assert_eq!(pqueue.len(), counter);
+        assert_eq!(pqueue.len(), pqueue.dynamic.len());
     }
 }
 
@@ -366,7 +376,7 @@ impl<K: Ord, V, S: Strategy> SVMap<K, V, S> {
     /// the key in such a case!
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         if let Some(entry) = self.search_mut(&key) {
-            let result = std::mem::replace(&mut entry.1, Some(value));
+            let result = core::mem::replace(&mut entry.1, Some(value));
 
             if let None = result {
                 self.len += 1;
@@ -380,17 +390,27 @@ impl<K: Ord, V, S: Strategy> SVMap<K, V, S> {
             None
         }
     }
-    
+   
+
+    const REBUILD_THRESHOLD: usize = 16;
     
     pub fn remove<Q: Ord + ?Sized>(&mut self, key: &Q) -> Option<V> where
         K: core::borrow::Borrow<Q>
     {
         if let Some(entry) = self.search_mut(&key) {
-            let result = std::mem::replace(&mut entry.1, None);
+            let result = core::mem::replace(&mut entry.1, None);
 
             if let Some(_) = result {
                 self.len -= 1;
                 self.free_count += 1;
+            }
+
+            if self.free_count > self.len && self.len > Self::REBUILD_THRESHOLD {
+                let mut tmp = SVMap::<K, V>::with_strategy::<S>();
+
+                core::mem::swap(self, &mut tmp);
+
+                *self = tmp.into_iter().collect();
             }
 
             result
@@ -406,4 +426,65 @@ impl<K: Ord, V, S: Strategy> SVMap<K, V, S> {
     }
 }
 
+impl<K: Ord, V, S: Strategy> core::iter::FromIterator<(K, V)> for SVMap<K, V, S> {
+    fn from_iter<I: IntoIterator<Item=(K, V)>>(iter: I) -> Self {
+        let sv = iter
+            .into_iter()
+            .map(|(k,v)| SVPair(k, Some(v)))
+            .collect::<SortedVec<_>>();
 
+        let mut dynamic = Dynamic::new();
+        let len = sv.len();
+        dynamic.add_unit(sv);
+
+        Self {
+            dynamic,
+            len,
+            free_count: 0,
+        }
+    }
+}
+
+
+/// Iterator over key-value pairs for [`SVMap`].
+///
+/// __Does not__ sort the values by key.
+// FIXME: sort entries by key! (or better add a corresponding method)
+pub struct SVMapKV<K, V> {
+    unit_iter: DynamicIntoIter<SortedVec<SVPair<K, V>>>,
+    opt_kv_iter: Option<alloc::vec::IntoIter<SVPair<K, V>>>,
+}
+
+impl<K, V> Iterator for SVMapKV<K, V> {
+    type Item = (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(kv_iter) = &mut self.opt_kv_iter {
+                while let Some(sv_pair) = kv_iter.next() {
+                    if let Some(value) = sv_pair.1 {
+                        return Some( (sv_pair.0, value) );
+                    }
+                }
+            } // kv_iter is empty or absent
+            
+            self.opt_kv_iter = 
+                self.unit_iter.next().map(|sv| sv.vec.into_iter());
+            
+            if let None = self.opt_kv_iter { return None; }
+        }
+    }
+}
+
+
+impl<K: Ord, V, S> core::iter::IntoIterator for SVMap<K, V, S> {
+    type Item = (K, V);
+    type IntoIter = SVMapKV<K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        SVMapKV {
+            unit_iter: self.dynamic.into_iter(),
+            opt_kv_iter: None,
+        }
+    }
+}

@@ -146,6 +146,18 @@
 //! ]);
 //! ```
 
+////////////////////////
+// SOME PRELIMINARIES //
+////////////////////////
+#![no_std]
+extern crate alloc;
+use alloc::vec::Vec;
+use alloc::vec;
+
+///////////////////
+// THE MAIN PART //
+///////////////////
+
 /// A trait that a static container must implement to become dynamizable.
 pub trait Static where Self: Sized {
     /// Size of the container.
@@ -234,13 +246,18 @@ impl<Container: Static, S: Strategy> Dynamic<Container, S> {
     }
 
     /// Iterator over all the partial containers. Shared-reference version.
-    pub fn units(&self) -> impl Iterator<Item=&Container> {
-        self.units.iter().filter_map(|x| x.as_ref())
+    pub fn units(&self) -> Units<Container>/*impl Iterator<Item=&Container>*/ {
+        Units {
+            units: self.units.iter()//.filter_map(|x| x.as_ref())
+        }
     }
 
     /// Iterator over all the partial containers. Unique-reference version.
-    pub fn units_mut(&mut self) -> impl Iterator<Item=&mut Container> {
-        self.units.iter_mut().filter_map(|x| x.as_mut())
+    pub fn units_mut(&mut self) -> UnitsMut<Container>/*impl Iterator<Item=&mut Container>*/ 
+    {
+        UnitsMut {
+            units: self.units.iter_mut()//.filter_map(|x| x.as_mut())
+        }
     }
 
     /// Collects all the partial containers into a single one.
@@ -276,7 +293,77 @@ impl<Container: Static+Singleton, S: Strategy> Dynamic<Container, S> {
 }
 
 
+/// Shared-reference iterator over all the partial containers.
+pub struct Units<'a, Container> {
+    units: core::slice::Iter<'a, Option<Container>>,
+}
+
+impl<'a, Container> Iterator for Units<'a, Container> {
+    type Item = &'a Container;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.units.next().map(|x| x.as_ref()) {
+                Some(None) => {}
+                Some(Some(item)) => { return Some(item); }
+                None => { return None; }
+            }
+        }
+    }
+}
+
+
+/// Unique-reference iterator over all the partial containers.
+pub struct UnitsMut<'a, Container> {
+    units: core::slice::IterMut<'a, Option<Container>>,
+}
+
+impl<'a, Container> Iterator for UnitsMut<'a, Container> {
+    type Item = &'a mut Container;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.units.next().map(|x| x.as_mut()) {
+                Some(None) => {}
+                Some(Some(item)) => { return Some(item); }
+                None => { return None; }
+            }
+        }
+    }
+}
+
+
+/// Owning iterator over all the partial containers.
+pub struct DynamicIntoIter<Container> {
+    units: alloc::vec::IntoIter<Option<Container>>
+}
+
+impl<Container> Iterator for DynamicIntoIter<Container> {
+    type Item = Container;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.units.next() {
+                Some(None) => {}
+                Some(Some(item)) => { return Some(item); }
+                None => { return None; }
+            }
+        }
+    }
+}
+
+
+impl<Container, S> IntoIterator for Dynamic<Container, S> {
+    type Item = Container;
+    type IntoIter = DynamicIntoIter<Container>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        DynamicIntoIter {
+            units: self.units.into_iter()
+        }
+    }
+}
+
+
 #[cfg(any(feature = "sorted_vec", doc))]
 pub mod sorted_vec;
-
-

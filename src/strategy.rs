@@ -68,7 +68,7 @@ impl Strategy for Binary {
         }
 
         for unit in &mut units[index..] {
-            let content = std::mem::replace(unit, None);
+            let content = core::mem::replace(unit, None);
             
             match content {
                 None => {
@@ -119,7 +119,7 @@ impl Strategy for SimpleBinary {
         mut container: Container)
     {
         for unit in &mut *units {
-            let content = std::mem::replace(unit, None);
+            let content = core::mem::replace(unit, None);
             
             match content {
                 None => {
@@ -175,7 +175,7 @@ impl Strategy for SkewBinary {
         }
 
         let unit = &mut units[self.last_merge];
-        let content = std::mem::replace(unit, None);
+        let content = core::mem::replace(unit, None);
             
         match content {
             None => {
@@ -197,7 +197,7 @@ impl Strategy for SkewBinary {
         }
 
         let unit = &mut units[new_index];
-        let content = std::mem::replace(unit, None);
+        let content = core::mem::replace(unit, None);
             
         match content {
             None => {
